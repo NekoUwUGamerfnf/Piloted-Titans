@@ -1,0 +1,16 @@
+{
+	"Name": "Neko's Piloted Titans",
+	"Description": "",
+	"Version": "1.0.0",
+	"LoadPriority": 20,
+	"RequiredOnClient": false,
+	"Scripts": [
+		{
+			"Path": "pilotedtitan.nut",
+			"RunOn": "SERVER",
+			"ServerCallback": {
+				"Before": "pilotedtitan_init"
+			}
+		}
+	]
+}
