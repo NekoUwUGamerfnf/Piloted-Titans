@@ -5,6 +5,8 @@ struct
 array<entity> props
 table<entity, entity> propsowner
 table<entity, entity> playersprop
+table<entity, bool> isntbeingexecuted
+table<entity, bool> isntexecuting
 }file
 
 void function pilotedtitan_init()
@@ -24,6 +26,8 @@ prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
 DispatchSpawn( prop )
+prop.kv.VisibilityFlags = ~ENTITY_VISIBLE_TO_EVERYONE
+NPC_NoTarget( prop )
 prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
@@ -33,13 +37,48 @@ return prop
 
 void function OnNPCTitanSpawned( entity titan )
 {
+thread ExecutionCheck( titan )
 if( !IsSingleplayer() )
-thread OnNPCTitanSpawned_thread( titan )
+thread OnNPCTitanSpawned_mp( titan )
 if( IsSingleplayer() )
 thread OnNPCTitanSpawned_sp( titan )
 }
 
-void function OnNPCTitanSpawned_thread( entity titan )
+void function ExecutionCheck( entity titan )
+{
+titan.EndSignal( "OnDestroy" )
+titan.EndSignal( "OnDeath" )
+titan.EndSignal( "OnSyncedMeleeVictim" )
+OnThreadEnd(
+	function() : ( titan )
+	{
+     if( IsValid( titan ) )
+     {
+      if( IsAlive( titan ) )
+      file.isntbeingexecuted[titan] <- false
+     }
+	}
+)
+ while( true )
+ {
+ titan.WaitSignal( "OnSyncedMeleeAttacker" )
+ file.isntexecuting[titan] <- false
+ WaittillAnimDone( titan )
+ file.isntexecuting[titan] <- true
+ }
+}
+
+bool function IsValidForPilotSpawn( entity titan )
+{
+bool valid = true
+if ( titan in file.isntexecuting )
+valid = file.isntexecuting[titan]
+if ( titan in file.isntbeingexecuted && valid != false )
+valid = file.isntbeingexecuted[titan]
+return valid
+}
+
+void function OnNPCTitanSpawned_mp( entity titan )
 {
  titan.EndSignal( "OnDestroy" )
  titan.EndSignal( "OnDeath" )
@@ -58,7 +97,7 @@ void function OnNPCTitanSpawned_thread( entity titan )
     {
     playersprop = file.playersprop[titan]
     }
-    if( !IsValid( playersprop ) && !titan.Anim_IsActive() )
+    if( !IsValid( playersprop ) && IsValidForPilotSpawn( titan ) )
     {
     //entity prop = CreatePropDynamic( soul.soul.seatedNpcPilot.modelAsset )
     entity prop = CreateCockpitPilot( titan, soul.soul.seatedNpcPilot.modelAsset )
@@ -90,7 +129,7 @@ void function OnNPCTitanSpawned_sp( entity titan )
    {
    playersprop = file.playersprop[titan]
    }
-   if( !IsValid( playersprop ) && !titan.Anim_IsActive() )
+   if( !IsValid( playersprop ) && IsValidForPilotSpawn( titan ) )
    {
    //entity prop = CreatePropDynamic( GetBossTitanCharacterModel( titan ) )
    entity prop = CreateCockpitPilot( titan, GetBossTitanCharacterModel( titan ) )
@@ -166,11 +205,13 @@ void function Pilotedtitan_thread()
     propsowner = file.propsowner[prop]
     if( !IsValid( propsowner ) )
     prop.Destroy()
+    if( !IsAlive( propsowner ) )
+    prop.Destroy()
     if( propsowner.ContextAction_IsMeleeExecution() )
     prop.Destroy()
     if( !propsowner.IsPlayer() )
     {
-    if( propsowner.Anim_IsActive() ) 
+    if( !IsValidForPilotSpawn( propsowner ) ) 
     prop.Destroy()
     }
     if( IsValid( prop ) )
