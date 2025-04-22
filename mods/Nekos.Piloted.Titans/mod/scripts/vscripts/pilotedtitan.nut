@@ -12,42 +12,139 @@ void function pilotedtitan_init()
 Pilotedtitan()
 AddCallback_OnPilotBecomesTitan( OnPilotBecomesTitan )
 AddCallback_OnTitanBecomesPilot( OnTitanBecomesPilot )
+AddSpawnCallback( "npc_titan", OnNPCTitanSpawned )
+PrecacheModel( $"models/humans/pilots/sp_medium_reaper_m.mdl" )
+}
+
+entity function CreateCockpitPilot( entity player, asset model )
+{
+entity prop = CreateEntity( "npc_pilot_elite" ) // Would Use CreatePropDynamic But Its Buggy Trying To Look In The Cockpit
+prop.SetOrigin( player.GetOrigin() )
+prop.SetModel( model )
+SetTeam( prop, player.GetTeam() )
+prop.SetInvulnerable()
+DispatchSpawn( prop )
+prop.SetModel( model )
+SetTeam( prop, player.GetTeam() )
+prop.SetInvulnerable()
+HideName( prop )
+return prop
+}
+
+void function OnNPCTitanSpawned( entity titan )
+{
+if( !IsSingleplayer() )
+thread OnNPCTitanSpawned_thread( titan )
+if( IsSingleplayer() )
+thread OnNPCTitanSpawned_sp( titan )
+}
+
+void function OnNPCTitanSpawned_thread( entity titan )
+{
+ titan.EndSignal( "OnDestroy" )
+ titan.EndSignal( "OnDeath" )
+ entity soul = titan.GetTitanSoul()
+ if( !IsValid( soul ) )
+ return
+ soul.EndSignal( "OnDestroy" )
+ while( true )
+ {
+  if( soul.soul.seatedNpcPilot.isValid )
+  {
+   if( soul.soul.seatedNpcPilot.modelAsset != $"" )
+   {
+    entity playersprop
+    if ( titan in file.playersprop )
+    {
+    playersprop = file.playersprop[titan]
+    }
+    if( !IsValid( playersprop ) && !titan.Anim_IsActive() )
+    {
+    //entity prop = CreatePropDynamic( soul.soul.seatedNpcPilot.modelAsset )
+    entity prop = CreateCockpitPilot( titan, soul.soul.seatedNpcPilot.modelAsset )
+    file.playersprop[titan] <- prop
+    file.propsowner[prop] <- titan
+    file.props.append( prop )
+    }
+   }
+  }
+  WaitFrame()
+ }
+}
+
+void function OnNPCTitanSpawned_sp( entity titan )
+{
+ titan.EndSignal( "OnDestroy" )
+ titan.EndSignal( "OnDeath" )
+ entity soul = titan.GetTitanSoul()
+ if( !IsValid( soul ) )
+ return
+ soul.EndSignal( "OnDestroy" )
+ while( true )
+ {
+  #if HAS_BOSS_AI
+  if ( IsBossTitan( titan ) )
+  {
+   entity playersprop
+   if ( titan in file.playersprop )
+   {
+   playersprop = file.playersprop[titan]
+   }
+   if( !IsValid( playersprop ) && !titan.Anim_IsActive() )
+   {
+   //entity prop = CreatePropDynamic( GetBossTitanCharacterModel( titan ) )
+   entity prop = CreateCockpitPilot( titan, GetBossTitanCharacterModel( titan ) )
+   file.playersprop[titan] <- prop
+   file.propsowner[prop] <- titan
+   file.props.append( prop )
+   }
+  }
+  #endif
+  WaitFrame()
+ }
 }
 
 void function OnTitanBecomesPilot( entity pilot, entity titan )
 {
-entity playersprop = file.playersprop[pilot]
+entity playersprop
+if ( pilot in file.playersprop )
+playersprop = file.playersprop[pilot]
 if( IsValid( playersprop ) )
 playersprop.Destroy()
 }
 
 void function OnPilotBecomesTitan( entity pilot, entity titan )
 {
- if( !pilot.IsTitan() )
+thread OnPilotBecomesTitan_thread( pilot )
+}
+
+void function OnPilotBecomesTitan_thread( entity pilot )
+{
+pilot.EndSignal( "OnDestroy" )
+pilot.EndSignal( "OnDeath" )
+ while( true )
  {
- entity prop = CreatePropDynamic( pilot.GetModelName() )
- file.playersprop[pilot] = prop
- file.propsowner[prop] = pilot
- file.props.append( prop )
- }
- if( pilot.IsTitan() )
- {
- entity model = Wallrun_CreateCopyOfPilotModel( pilot )
- entity prop = CreatePropDynamic( model.GetModelName() )
- /*
- entity prop = CreateEntity( "npc_pilot_elite" )
- prop.SetModel( model.GetModelName() )
- SetTeam( prop, pilot.GetTeam() )
- prop.SetInvulnerable()
- DispatchSpawn( prop )
- SetTeam( prop, pilot.GetTeam() )
- prop.SetModel( model.GetModelName() )
- TakeWeaponsForArray( prop, prop.GetMainWeapons() )
- */
- file.playersprop[pilot] <- prop
- file.propsowner[prop] <- pilot
- file.props.append( prop )
- model.Destroy()
+  if( !pilot.IsTitan() )
+  return
+  if( pilot.IsTitan() )
+  {
+   entity playersprop
+   if ( pilot in file.playersprop )
+   {
+   playersprop = file.playersprop[pilot]
+   }
+   if( !IsValid( playersprop ) && !pilot.ContextAction_IsMeleeExecution() )
+   {
+   entity model = Wallrun_CreateCopyOfPilotModel( pilot )
+   //entity prop = CreatePropDynamic( model.GetModelName() )
+   entity prop = CreateCockpitPilot( pilot, model.GetModelName() )
+   file.playersprop[pilot] <- prop
+   file.propsowner[prop] <- pilot
+   file.props.append( prop )
+   model.Destroy()
+   }
+  }
+  WaitFrame()
  }
 }
 
@@ -64,18 +161,39 @@ void function Pilotedtitan_thread()
   {
    if( IsValid( prop ) )
    {
-   entity propsowner = file.propsowner[prop]
-   if( !IsValid( propsowner ) )
-   prop.Destroy()
-   if( prop.GetTeam() != propsowner.GetTeam() )
-   SetTeam( prop, propsowner.GetTeam() )
-   FirstPersonSequenceStruct sequence
-   sequence.attachment = "hijack"
-   sequence.useAnimatedRefAttachment = true
-   sequence.blendTime = 0
-   sequence.thirdPersonAnim = "pt_ht_synced_bt_execute_kickshoot_V"
-   thread FirstPersonSequence( sequence, prop, propsowner )
-   prop.kv.VisibilityFlags = propsowner.kv.VisibilityFlags
+    entity propsowner
+    if ( prop in file.propsowner )
+    propsowner = file.propsowner[prop]
+    if( !IsValid( propsowner ) )
+    prop.Destroy()
+    if( propsowner.ContextAction_IsMeleeExecution() )
+    prop.Destroy()
+    if( !propsowner.IsPlayer() )
+    {
+    if( propsowner.Anim_IsActive() ) 
+    prop.Destroy()
+    }
+    if( IsValid( prop ) )
+    {
+     if( prop.GetTeam() != propsowner.GetTeam() )
+     SetTeam( prop, propsowner.GetTeam() )
+     FirstPersonSequenceStruct sequence
+     sequence.attachment = "hijack"
+     sequence.useAnimatedRefAttachment = true
+     sequence.blendTime = 0
+     sequence.thirdPersonAnim = "pt_mt_synced_bt_execute_kickshoot_V"
+	 string attackerType = GetTitanCharacterName( propsowner )
+	 switch ( attackerType )
+     {
+	 case "scorch":
+ 	 case "legion":
+     sequence.thirdPersonAnim = "pt_mount_ogre_kneel_behind"
+     sequence.setInitialTime = 2.5
+     break
+     }
+     thread FirstPersonSequence( sequence, prop, propsowner )
+     prop.kv.VisibilityFlags = propsowner.kv.VisibilityFlags
+    }
    }
   }
   WaitFrame()
