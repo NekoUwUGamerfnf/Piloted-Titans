@@ -28,6 +28,7 @@ prop.SetInvulnerable()
 DispatchSpawn( prop )
 prop.kv.VisibilityFlags = ~ENTITY_VISIBLE_TO_EVERYONE
 NPC_NoTarget( prop )
+prop.EnableNPCFlag( NPC_IGNORE_ALL )
 prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
