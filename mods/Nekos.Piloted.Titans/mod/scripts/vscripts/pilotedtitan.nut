@@ -7,8 +7,7 @@ table<entity, entity> propsowner
 table<entity, entity> playersprop
 table<entity, bool> isntbeingexecuted
 table<entity, bool> isntexecuting
-table<entity, bool> isntusingcore
-table<entity, float> howlongcorewasinuse
+table<entity, bool> hasntplayedbossintro
 }file
 
 void function pilotedtitan_init()
@@ -47,7 +46,7 @@ thread OnNPCTitanSpawned_mp( titan )
  {
  thread OnNPCTitanSpawned_sp( titan )
  if( GetMapName() != "sp_s2s" )
- thread TitanCoreUsageCheck_sp( titan )
+ thread TitanBossIntroCheck_sp( titan )
  }
 }
 
@@ -75,27 +74,19 @@ OnThreadEnd(
  }
 }
 
-void function TitanCoreUsageCheck_sp( entity titan )
+void function TitanBossIntroCheck_sp( entity titan )
 {
 titan.EndSignal( "OnDestroy" )
 titan.EndSignal( "OnDeath" )
  while( true )
  {
-  wait 0.1
-  if( TitanCoreInUse( titan ) )
+  WaitFrame()
+  if( titan.e.isHotDropping == false && titan.Anim_IsActive() )
   {
-  file.isntusingcore[titan] <- false
-  file.howlongcorewasinuse[titan] <- 2
-  }
-  if( !TitanCoreInUse( titan ) )
-  {
-   if ( titan in file.howlongcorewasinuse )
-   {
-   if ( file.howlongcorewasinuse[titan] == 0 )
-   file.isntusingcore[titan] <- true
-   if ( file.howlongcorewasinuse[titan] != 0 )
-   file.howlongcorewasinuse[titan] <- file.howlongcorewasinuse[titan] - 0.1
-   }
+  wait 0.2
+  WaittillAnimDone( titan )
+  file.hasntplayedbossintro[titan] <- false
+  return
   }
  }
 }
@@ -109,10 +100,10 @@ if ( titan in file.isntbeingexecuted && valid != false )
 valid = file.isntbeingexecuted[titan]
  if ( IsSingleplayer() && GetMapName() != "sp_s2s" ) // Viper Never Shows Their Pilot
  {
- bool isusingcore = false
- if ( titan in file.isntusingcore )
- isusingcore = file.isntusingcore[titan]
- if( titan.Anim_IsActive() && !TitanCoreInUse( titan ) && isusingcore == false )
+ bool hasntplayedbossintro = true
+ if ( titan in file.hasntplayedbossintro )
+ hasntplayedbossintro = file.hasntplayedbossintro[titan]
+ if( hasntplayedbossintro == true )
  valid = false
  }
 return valid
