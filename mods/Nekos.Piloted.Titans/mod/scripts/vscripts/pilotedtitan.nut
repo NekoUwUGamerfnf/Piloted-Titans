@@ -27,6 +27,7 @@ prop.SetOrigin( player.GetOrigin() )
 prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
+SetSpawnOption_Weapon( prop, "mp_weapon_lmg" )
 DispatchSpawn( prop )
 prop.kv.VisibilityFlags = ~ENTITY_VISIBLE_TO_EVERYONE
 NPC_NoTarget( prop )
