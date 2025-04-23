@@ -8,6 +8,7 @@ table<entity, entity> playersprop
 table<entity, bool> isntbeingexecuted
 table<entity, bool> isntexecuting
 table<entity, bool> hasntplayedbossintro
+table<entity, bool> iscontrolledbynpc
 }file
 
 void function pilotedtitan_init()
@@ -147,6 +148,7 @@ void function OnNPCTitanSpawned_mp( entity titan )
     {
     //entity prop = CreatePropDynamic( soul.soul.seatedNpcPilot.modelAsset )
     entity prop = CreateCockpitPilot( titan, soul.soul.seatedNpcPilot.modelAsset )
+    file.iscontrolledbynpc[titan] <- true
     file.playersprop[titan] <- prop
     file.propsowner[prop] <- titan
     file.props.append( prop )
@@ -270,14 +272,41 @@ void function Pilotedtitan_thread()
     propsowner = file.propsowner[prop]
     if( !IsValid( propsowner ) )
     prop.Destroy()
+    if( IsValid( prop ) )
+    {
     if( !IsAlive( propsowner ) )
     prop.Destroy()
+    }
+    if( IsValid( prop ) )
+    {
     if( propsowner.ContextAction_IsMeleeExecution() )
     prop.Destroy()
-    if( !propsowner.IsPlayer() )
+    }
+    if( IsValid( prop ) )
     {
-    if( !IsValidForPilotSpawn( propsowner ) ) 
-    prop.Destroy()
+     if( !propsowner.IsPlayer() )
+     {
+      if( !IsValidForPilotSpawn( propsowner ) ) 
+      prop.Destroy()
+     }
+    }
+    if( IsValid( prop ) )
+    {
+     if( !propsowner.IsPlayer() )
+     {
+      entity soul = propsowner.GetTitanSoul()
+      if( IsValid( soul ) )
+      {
+       bool iscontrolledbynpc = false
+       if ( propsowner in file.iscontrolledbynpc )
+       bool iscontrolledbynpc = file.iscontrolledbynpc[propsowner]
+       if( iscontrolledbynpc == true )
+       {
+       if( !( soul.soul.seatedNpcPilot.isValid ) )
+       prop.Destroy()
+       }
+      }
+     }
     }
     if( IsValid( prop ) )
     {
