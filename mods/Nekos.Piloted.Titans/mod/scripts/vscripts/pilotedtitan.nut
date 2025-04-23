@@ -299,7 +299,7 @@ void function Pilotedtitan_thread()
       {
        bool iscontrolledbynpc = false
        if ( propsowner in file.iscontrolledbynpc )
-       bool iscontrolledbynpc = file.iscontrolledbynpc[propsowner]
+       iscontrolledbynpc = file.iscontrolledbynpc[propsowner]
        if( iscontrolledbynpc == true )
        {
        if( !( soul.soul.seatedNpcPilot.isValid ) )
