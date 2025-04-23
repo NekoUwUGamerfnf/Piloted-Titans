@@ -7,6 +7,8 @@ table<entity, entity> propsowner
 table<entity, entity> playersprop
 table<entity, bool> isntbeingexecuted
 table<entity, bool> isntexecuting
+table<entity, bool> isntusingcore
+table<entity, float> howlongcorewasinuse
 }file
 
 void function pilotedtitan_init()
@@ -41,8 +43,12 @@ void function OnNPCTitanSpawned( entity titan )
 thread ExecutionCheck( titan )
 if( !IsSingleplayer() )
 thread OnNPCTitanSpawned_mp( titan )
-if( IsSingleplayer() )
-thread OnNPCTitanSpawned_sp( titan )
+ if( IsSingleplayer() )
+ {
+ thread OnNPCTitanSpawned_sp( titan )
+ if( GetMapName() != "sp_s2s" )
+ thread TitanCoreUsageCheck_sp( titan )
+ }
 }
 
 void function ExecutionCheck( entity titan )
@@ -69,6 +75,31 @@ OnThreadEnd(
  }
 }
 
+void function TitanCoreUsageCheck_sp( entity titan )
+{
+titan.EndSignal( "OnDestroy" )
+titan.EndSignal( "OnDeath" )
+ while( true )
+ {
+  wait 0.1
+  if( TitanCoreInUse( titan ) )
+  {
+  file.isntusingcore[titan] <- false
+  file.howlongcorewasinuse[titan] <- 2
+  }
+  if( !TitanCoreInUse( titan ) )
+  {
+   if ( titan in file.howlongcorewasinuse )
+   {
+   if ( file.howlongcorewasinuse[titan] == 0 )
+   file.isntusingcore[titan] <- true
+   if ( file.howlongcorewasinuse[titan] != 0 )
+   file.howlongcorewasinuse[titan] <- file.howlongcorewasinuse[titan] - 0.1
+   }
+  }
+ }
+}
+
 bool function IsValidForPilotSpawn( entity titan )
 {
 bool valid = true
@@ -76,7 +107,30 @@ if ( titan in file.isntexecuting )
 valid = file.isntexecuting[titan]
 if ( titan in file.isntbeingexecuted && valid != false )
 valid = file.isntbeingexecuted[titan]
+ if ( IsSingleplayer() && GetMapName() != "sp_s2s" ) // Viper Never Shows Their Pilot
+ {
+ bool isusingcore = false
+ if ( titan in file.isntusingcore )
+ isusingcore = file.isntusingcore[titan]
+ if( titan.Anim_IsActive() && !TitanCoreInUse( titan ) && isusingcore == false )
+ valid = false
+ }
 return valid
+}
+
+bool function IsEliteTitan( entity titan )
+{
+	if ( titan.GetTeam() != TEAM_IMC )
+		return false
+
+	switch ( titan.ai.bossTitanType )
+	{
+		case TITAN_MERC:
+		case TITAN_BOSS:
+			return true
+	}
+
+	return false
 }
 
 void function OnNPCTitanSpawned_mp( entity titan )
@@ -102,6 +156,25 @@ void function OnNPCTitanSpawned_mp( entity titan )
     {
     //entity prop = CreatePropDynamic( soul.soul.seatedNpcPilot.modelAsset )
     entity prop = CreateCockpitPilot( titan, soul.soul.seatedNpcPilot.modelAsset )
+    file.playersprop[titan] <- prop
+    file.propsowner[prop] <- titan
+    file.props.append( prop )
+    }
+   }
+  }
+  if( IsEliteTitan( titan ) )
+  {
+   if( GameRules_GetGameMode() == FD )
+   {
+    entity playersprop
+    if ( titan in file.playersprop )
+    {
+    playersprop = file.playersprop[titan]
+    }
+    if( !IsValid( playersprop ) && IsValidForPilotSpawn( titan ) )
+    {
+    //entity prop = CreatePropDynamic( TEAM_IMC_GRUNT_MODEL )
+    entity prop = CreateCockpitPilot( titan, TEAM_IMC_GRUNT_MODEL )
     file.playersprop[titan] <- prop
     file.propsowner[prop] <- titan
     file.props.append( prop )
