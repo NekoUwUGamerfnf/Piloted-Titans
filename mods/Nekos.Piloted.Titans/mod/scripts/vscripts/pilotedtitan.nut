@@ -18,6 +18,7 @@ AddCallback_OnPilotBecomesTitan( OnPilotBecomesTitan )
 AddCallback_OnTitanBecomesPilot( OnTitanBecomesPilot )
 AddSpawnCallback( "npc_titan", OnNPCTitanSpawned )
 PrecacheModel( $"models/humans/pilots/sp_medium_reaper_m.mdl" )
+PrecacheModel( $"models/weapons/r97/w_r97.mdl" )
 }
 
 entity function CreateCockpitPilot( entity player, asset model )
@@ -27,7 +28,6 @@ prop.SetOrigin( player.GetOrigin() )
 prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
-SetSpawnOption_Weapon( prop, "mp_weapon_lmg" )
 DispatchSpawn( prop )
 prop.kv.VisibilityFlags = ~ENTITY_VISIBLE_TO_EVERYONE
 NPC_NoTarget( prop )
