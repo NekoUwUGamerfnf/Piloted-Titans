@@ -17,13 +17,13 @@ Pilotedtitan()
 AddCallback_OnPilotBecomesTitan( OnPilotBecomesTitan )
 AddCallback_OnTitanBecomesPilot( OnTitanBecomesPilot )
 AddSpawnCallback( "npc_titan", OnNPCTitanSpawned )
-PrecacheModel( $"models/humans/pilots/sp_medium_reaper_m.mdl" )
-PrecacheModel( $"models/weapons/r97/w_r97.mdl" )
 }
 
 entity function CreateCockpitPilot( entity player, asset model )
 {
 entity prop = CreateEntity( "npc_pilot_elite" ) // Would Use CreatePropDynamic But Its Buggy Trying To Look In The Cockpit
+if( GetMapName() == "sp_skyway_v1" )
+SetSpawnOption_Weapon( prop, "mp_weapon_lmg" )
 prop.SetOrigin( player.GetOrigin() )
 prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
