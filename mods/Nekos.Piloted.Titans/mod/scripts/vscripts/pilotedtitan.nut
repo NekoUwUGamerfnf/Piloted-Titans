@@ -36,6 +36,7 @@ prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
 HideName( prop )
+prop.SetCanCloak( true )
 return prop
 }
 
@@ -313,6 +314,10 @@ void function Pilotedtitan_thread()
     {
      if( prop.GetTeam() != propsowner.GetTeam() )
      SetTeam( prop, propsowner.GetTeam() )
+     if( IsCloaked( propsowner ) && !IsCloaked( prop ) )
+     EnableCloakForever( prop )
+     if( !IsCloaked( propsowner ) && IsCloaked( prop ) )
+     DisableCloakForever( prop )
      FirstPersonSequenceStruct sequence
      sequence.attachment = "hijack"
      sequence.useAnimatedRefAttachment = true
