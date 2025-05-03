@@ -36,7 +36,6 @@ prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
 HideName( prop )
-prop.SetCanCloak( true )
 return prop
 }
 
@@ -314,10 +313,17 @@ void function Pilotedtitan_thread()
     {
      if( prop.GetTeam() != propsowner.GetTeam() )
      SetTeam( prop, propsowner.GetTeam() )
-     if( IsCloaked( propsowner ) && !IsCloaked( prop ) )
-     EnableCloakForever( prop )
-     if( !IsCloaked( propsowner ) && IsCloaked( prop ) )
-     DisableCloakForever( prop )
+     bool changedvisflag = false
+     if( IsCloaked( propsowner ) && prop.kv.VisibilityFlags == ENTITY_VISIBLE_TO_EVERYONE )
+     {
+     prop.kv.VisibilityFlags = ~ENTITY_VISIBLE_TO_EVERYONE
+     changedvisflag = true
+     }
+     if( !IsCloaked( propsowner ) && prop.kv.VisibilityFlags == ENTITY_VISIBLE_TO_EVERYONE )
+     {
+     prop.kv.VisibilityFlags = ENTITY_VISIBLE_TO_EVERYONE
+     changedvisflag = true
+     }
      FirstPersonSequenceStruct sequence
      sequence.attachment = "hijack"
      sequence.useAnimatedRefAttachment = true
@@ -333,6 +339,7 @@ void function Pilotedtitan_thread()
      break
      }
      thread FirstPersonSequence( sequence, prop, propsowner )
+     if( changedvisflag == false )
      prop.kv.VisibilityFlags = propsowner.kv.VisibilityFlags
     }
    }
