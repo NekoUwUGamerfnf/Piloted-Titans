@@ -314,14 +314,9 @@ void function Pilotedtitan_thread()
      if( prop.GetTeam() != propsowner.GetTeam() )
      SetTeam( prop, propsowner.GetTeam() )
      bool changedvisflag = false
-     if( IsCloaked( propsowner ) && prop.kv.VisibilityFlags == ENTITY_VISIBLE_TO_EVERYONE )
+     if( IsCloaked( propsowner ) )
      {
      prop.kv.VisibilityFlags = ~ENTITY_VISIBLE_TO_EVERYONE
-     changedvisflag = true
-     }
-     if( !IsCloaked( propsowner ) && prop.kv.VisibilityFlags == ENTITY_VISIBLE_TO_EVERYONE )
-     {
-     prop.kv.VisibilityFlags = ENTITY_VISIBLE_TO_EVERYONE
      changedvisflag = true
      }
      FirstPersonSequenceStruct sequence
