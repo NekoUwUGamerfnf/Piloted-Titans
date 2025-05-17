@@ -157,6 +157,7 @@ void function OnNPCTitanSpawned_mp( entity titan )
     file.playersprop[titan] <- prop
     file.propsowner[prop] <- titan
     file.props.append( prop )
+    RunTheMainPilotThing( prop )
     }
    }
   }
@@ -176,6 +177,7 @@ void function OnNPCTitanSpawned_mp( entity titan )
     file.playersprop[titan] <- prop
     file.propsowner[prop] <- titan
     file.props.append( prop )
+    RunTheMainPilotThing( prop )
     }
    }
   }
@@ -208,6 +210,7 @@ void function OnNPCTitanSpawned_sp( entity titan )
    file.playersprop[titan] <- prop
    file.propsowner[prop] <- titan
    file.props.append( prop )
+   RunTheMainPilotThing( prop )
    }
   }
   #endif
@@ -254,6 +257,7 @@ pilot.EndSignal( "OnDeath" )
    file.propsowner[prop] <- pilot
    file.props.append( prop )
    model.Destroy()
+   RunTheMainPilotThing( prop )
    }
   }
   WaitFrame()
@@ -271,6 +275,14 @@ void function Pilotedtitan_thread()
  {
   foreach( entity prop in file.props )
   {
+   RunTheMainPilotThing( prop )
+  }
+  WaitFrame()
+ }
+}
+
+void function RunTheMainPilotThing( entity prop )
+{
    if( IsValid( prop ) )
    {
     entity propsowner
@@ -347,7 +359,4 @@ void function Pilotedtitan_thread()
      prop.kv.VisibilityFlags = propsowner.kv.VisibilityFlags
     }
    }
-  }
-  WaitFrame()
- }
 }
