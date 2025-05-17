@@ -22,8 +22,7 @@ AddSpawnCallback( "npc_titan", OnNPCTitanSpawned )
 entity function CreateCockpitPilot( entity player, asset model )
 {
 entity prop = CreateEntity( "npc_pilot_elite" ) // Would Use CreatePropDynamic But Its Buggy Trying To Look In The Cockpit
-if( GetMapName() == "sp_skyway_v1" )
-SetSpawnOption_Weapon( prop, "mp_weapon_lmg" )
+SetSpawnOption_Weapon( prop, "mp_titanweapon_xo16_shorty" )
 prop.SetOrigin( player.GetOrigin() )
 prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
@@ -36,6 +35,7 @@ prop.SetModel( model )
 SetTeam( prop, player.GetTeam() )
 prop.SetInvulnerable()
 HideName( prop )
+TakeWeaponsForArray( prop, prop.GetMainWeapons() )
 return prop
 }
 
@@ -46,6 +46,8 @@ if( !IsSingleplayer() )
 thread OnNPCTitanSpawned_mp( titan )
  if( IsSingleplayer() )
  {
+ if( GetMapName() == "sp_skyway_v1" )
+ return
  thread OnNPCTitanSpawned_sp( titan )
  if( GetMapName() != "sp_s2s" )
  thread TitanBossIntroCheck_sp( titan )
@@ -96,24 +98,26 @@ titan.EndSignal( "OnDeath" )
 bool function IsValidForPilotSpawn( entity titan )
 {
 bool valid = true
-if ( titan in file.isntexecuting )
+if( titan in file.isntexecuting )
 valid = file.isntexecuting[titan]
-if ( titan in file.isntbeingexecuted && valid != false )
+if( titan in file.isntbeingexecuted && valid != false )
 valid = file.isntbeingexecuted[titan]
- if ( IsSingleplayer() && GetMapName() != "sp_s2s" ) // Viper Never Shows Their Pilot
+ if( IsSingleplayer() && GetMapName() != "sp_s2s" ) // Viper Never Shows Their Pilot
  {
  bool hasntplayedbossintro = true
- if ( titan in file.hasntplayedbossintro )
+ if( titan in file.hasntplayedbossintro )
  hasntplayedbossintro = file.hasntplayedbossintro[titan]
  if( hasntplayedbossintro == true )
  valid = false
  }
+if( titan.IsNPC() && IsValid( titan.GetBossPlayer() ) ) // Don't Want Player Titans Having Pilots In The Cockpit
+valid = false
 return valid
 }
 
 bool function IsEliteTitan( entity titan )
 {
-	if ( titan.GetTeam() != TEAM_IMC )
+	if( titan.GetTeam() != TEAM_IMC )
 		return false
 
 	switch ( titan.ai.bossTitanType )
@@ -141,7 +145,7 @@ void function OnNPCTitanSpawned_mp( entity titan )
    if( soul.soul.seatedNpcPilot.modelAsset != $"" )
    {
     entity playersprop
-    if ( titan in file.playersprop )
+    if( titan in file.playersprop )
     {
     playersprop = file.playersprop[titan]
     }
@@ -161,7 +165,7 @@ void function OnNPCTitanSpawned_mp( entity titan )
    if( GameRules_GetGameMode() == FD )
    {
     entity playersprop
-    if ( titan in file.playersprop )
+    if( titan in file.playersprop )
     {
     playersprop = file.playersprop[titan]
     }
@@ -190,10 +194,10 @@ void function OnNPCTitanSpawned_sp( entity titan )
  while( true )
  {
   #if HAS_BOSS_AI
-  if ( IsBossTitan( titan ) )
+  if( IsBossTitan( titan ) )
   {
    entity playersprop
-   if ( titan in file.playersprop )
+   if( titan in file.playersprop )
    {
    playersprop = file.playersprop[titan]
    }
@@ -213,8 +217,9 @@ void function OnNPCTitanSpawned_sp( entity titan )
 
 void function OnTitanBecomesPilot( entity pilot, entity titan )
 {
+thread OnNPCTitanSpawned( titan )
 entity playersprop
-if ( pilot in file.playersprop )
+if( pilot in file.playersprop )
 playersprop = file.playersprop[pilot]
 if( IsValid( playersprop ) )
 playersprop.Destroy()
@@ -236,7 +241,7 @@ pilot.EndSignal( "OnDeath" )
   if( pilot.IsTitan() )
   {
    entity playersprop
-   if ( pilot in file.playersprop )
+   if( pilot in file.playersprop )
    {
    playersprop = file.playersprop[pilot]
    }
@@ -269,7 +274,7 @@ void function Pilotedtitan_thread()
    if( IsValid( prop ) )
    {
     entity propsowner
-    if ( prop in file.propsowner )
+    if( prop in file.propsowner )
     propsowner = file.propsowner[prop]
     if( !IsValid( propsowner ) )
     prop.Destroy()
@@ -299,7 +304,7 @@ void function Pilotedtitan_thread()
       if( IsValid( soul ) )
       {
        bool iscontrolledbynpc = false
-       if ( propsowner in file.iscontrolledbynpc )
+       if( propsowner in file.iscontrolledbynpc )
        iscontrolledbynpc = file.iscontrolledbynpc[propsowner]
        if( iscontrolledbynpc == true )
        {
@@ -323,14 +328,18 @@ void function Pilotedtitan_thread()
      sequence.attachment = "hijack"
      sequence.useAnimatedRefAttachment = true
      sequence.blendTime = 0
-     sequence.thirdPersonAnim = "pt_mt_synced_bt_execute_kickshoot_V"
-	 string attackerType = GetTitanCharacterName( propsowner )
-	 switch ( attackerType )
+     sequence.thirdPersonAnim = "pt_mount_idle"
+	string attackerType = GetTitanCharacterName( propsowner )
+	switch ( attackerType )
      {
-	 case "scorch":
- 	 case "legion":
+	case "scorch":
+ 	case "legion":
      sequence.thirdPersonAnim = "pt_mount_ogre_kneel_behind"
      sequence.setInitialTime = 2.5
+     break
+     case "northstar":
+     case "ronin":
+     sequence.thirdPersonAnim = "pt_mt_synced_bt_execute_kickshoot_V"
      break
      }
      thread FirstPersonSequence( sequence, prop, propsowner )
