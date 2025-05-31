@@ -13,6 +13,7 @@ table<entity, bool> iscontrolledbynpc
 
 void function pilotedtitan_init()
 {
+PrecacheModel( $"models/humans/pilots/sp_medium_reaper_m.mdl" )
 Pilotedtitan()
 AddCallback_OnPilotBecomesTitan( OnPilotBecomesTitan )
 AddCallback_OnTitanBecomesPilot( OnTitanBecomesPilot )
